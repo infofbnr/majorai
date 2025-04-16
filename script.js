@@ -28,7 +28,7 @@ const dislikeButton = document.getElementById('dislikeButton');
 const inttext = document.getElementById('interests');
 
 let chatHistory = [
-    { role: "system", content: "You are an AI academic advisor. Ask questions one by one to learn more about the user's interests, then suggest suitable university majors." },
+    { role: "system", content: "You are an AI academic advisor. Ask questions one by one to learn more about the user's interests, then suggest suitable university majors. Do not use any markup, such as bold, italic, etc. Only pure english." },
     { role: "assistant", content: "Hi there! I'd love to help you find your ideal university major. Can you tell me what kind of subjects or activities you enjoy?" }
 ];
 
