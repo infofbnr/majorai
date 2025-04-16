@@ -26,13 +26,33 @@ const resultText = document.getElementById('resultText');
 const likeButton = document.getElementById('likeButton');
 const dislikeButton = document.getElementById('dislikeButton');
 const inttext = document.getElementById('interests');
-majorForm.addEventListener('submit', async function (e) {
-    e.preventDefault();
-    const interests = document.getElementById('interests').value;
 
-    resultText.textContent = 'Thinking...';
-    resultDiv.classList.remove('hidden');
-    currentSuggestionIndex = 0;
+let chatHistory = [
+    { role: "system", content: "You are an AI academic advisor. Ask questions one by one to learn more about the user's interests, then suggest suitable university majors." },
+    { role: "assistant", content: "Hi there! I'd love to help you find your ideal university major. Can you tell me what kind of subjects or activities you enjoy?" }
+];
+
+const chatContainer = document.getElementById('chatContainer');
+const chatInput = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+
+function addMessage(role, text) {
+    const bubble = document.createElement('div');
+    bubble.className = role === 'user' ? 'text-right' : 'text-left';
+    bubble.innerHTML = `<div class="inline-block bg-${role === 'user' ? 'blue' : 'gray'}-100 text-${role === 'user' ? 'blue' : 'gray'}-800 px-4 py-2 rounded-xl">${text}</div>`;
+    chatContainer.appendChild(bubble);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+async function sendMessage() {
+    const userInput = chatInput.value.trim();
+    if (!userInput) return;
+
+    addMessage('user', userInput);
+    chatHistory.push({ role: 'user', content: userInput });
+    chatInput.value = '';
+
+    addMessage('assistant', 'Thinking...');
 
     try {
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -43,66 +63,32 @@ majorForm.addEventListener('submit', async function (e) {
             },
             body: JSON.stringify({
                 model: "gpt-4o-mini",
-                messages: [
-                    {
-                        role: "system",
-                        content: "You are a helpful assistant that suggests university majors based on interests and skills. Give 5 different options, separated by commas, and only the major names."
-                    },
-                    {
-                        role: "user",
-                        content: `Based on the following interests and skills, suggest 5 suitable university majors: ${interests}`
-                    }
-                ],
+                messages: chatHistory,
                 max_tokens: 150
             })
         });
 
         const data = await response.json();
+        const reply = data.choices[0].message.content.trim();
 
-        if (response.ok && data.choices) {
-            const responseText = data.choices[0].message.content.trim();
-            suggestions = responseText.split(',').map(s => s.trim());
-            resultText.textContent = suggestions[currentSuggestionIndex];
-            dislikeButton.disabled= suggestions.length <= 1;
-        } else {
-            resultText.textContent = 'No suggestions found. Please try again.';
-            suggestions = [];
-        }
+        // Remove "Thinking..." and add real reply
+        chatContainer.lastChild.remove();
+        addMessage('assistant', reply);
+
+        chatHistory.push({ role: 'assistant', content: reply });
 
     } catch (error) {
-        resultText.textContent = `An error occurred. Please try again. ${error.message}`;
-        suggestions = [];
+        chatContainer.lastChild.remove();
+        addMessage('assistant', "Oops! Something went wrong. Try again later.");
     }
+}
+
+sendBtn.addEventListener('click', sendMessage);
+chatInput.addEventListener('keypress', e => {
+    if (e.key === 'Enter') sendMessage();
 });
 
-likeButton.addEventListener('click', function () {
-    if (suggestions.length > 0) {
-        alert(`Great! We're glad you liked: ${suggestions[currentSuggestionIndex]}`);
-
-        // Clear the text area
-        document.getElementById('interests').value = '';
-
-        // Hide the result section
-        resultDiv.classList.add('hidden');
-
-        // Reset suggestions and index
-        suggestions = [];
-        currentSuggestionIndex = 0;
-
-        // Re-enable buttons in case they were disabled before
-        likeButton.disabled = false;
-        dislikeButton.disabled = false;
-    }
-});
-
-
-dislikeButton.addEventListener('click', function () {
-    if (currentSuggestionIndex < suggestions.length - 1) {
-        currentSuggestionIndex++;
-        resultText.textContent = suggestions[currentSuggestionIndex];
-    } else {
-        resultText.textContent = "That's all the suggestions we have!";
-        dislikeButton.disabled = true;
-        likeButton.disabled = true;
-    }
+// Initial bot message
+window.addEventListener('load', () => {
+    addMessage('assistant', chatHistory[1].content);
 });
